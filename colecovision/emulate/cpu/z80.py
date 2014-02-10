@@ -3,6 +3,21 @@
 import logging
 
 from colecovision.emulate.cpu.register import Register, CompositeRegister
+from colecovision.emulate.cpu.instruction import Load_8b
+from colecovision.emulate.cpu.instruction import AddressMode
+
+
+#-----------------------------------------------------------------------------
+# Module Data
+#-----------------------------------------------------------------------------
+
+# module logger
+_logger = logging.getLogger(__name__)
+
+
+#-----------------------------------------------------------------------------
+# Classes
+#-----------------------------------------------------------------------------
 
 
 class Z80(object):
@@ -58,7 +73,29 @@ class Z80(object):
         self.hl     = CompositeRegister(self.h, self.l)
         self.hl_alt = CompositeRegister(self.h_alt, self.l_alt)
 
-        self.memory = memory_system
+        self.memsys = memory_system
+
+
+        # Mapping of opcodes to instructions
+
+                               # op code   class     arguments                                                                 bytes to read
+        self._instruction_map = {0x57ed : (Load_8b, (4,  self.a, AddressMode.REGISTER,  self.i,      AddressMode.REGISTER),          0),
+                                 0x5fed : (Load_8b, (4,  self.a, AddressMode.REGISTER,  self.r,      AddressMode.REGISTER),          0),
+                                 0x007f : (Load_8b, (4,  self.a, AddressMode.REGISTER,  self.a,      AddressMode.REGISTER),          0),
+                                 0x0078 : (Load_8b, (4,  self.a, AddressMode.REGISTER,  self.b,      AddressMode.REGISTER),          0),
+                                 0x0079 : (Load_8b, (4,  self.a, AddressMode.REGISTER,  self.c,      AddressMode.REGISTER),          0),
+                                 0x007a : (Load_8b, (4,  self.a, AddressMode.REGISTER,  self.d,      AddressMode.REGISTER),          0),
+                                 0X007b : (Load_8b, (4,  self.a, AddressMode.REGISTER,  self.e,      AddressMode.REGISTER),          0),
+                                 0x007c : (Load_8b, (4,  self.a, AddressMode.REGISTER,  self.f,      AddressMode.REGISTER),          0),
+                                 0x007d : (Load_8b, (4,  self.a, AddressMode.REGISTER,  self.l,      AddressMode.REGISTER),          0),
+                                 0x007e : (Load_8b, (7,  self.a, AddressMode.REGISTER,  self.hl,     AddressMode.REGISTER_INDIRECT), 0),
+                                 0x000a : (Load_8b, (7,  self.a, AddressMode.REGISTER,  self.bc,     AddressMode.REGISTER_INDIRECT), 0),
+                                 0x001a : (Load_8b, (7,  self.a, AddressMode.REGISTER,  self.de,     AddressMode.REGISTER_INDIRECT), 0),
+                                 0x7efd : (Load_8b, (19, self.a, AddressMode.REGISTER,  self.ix,     AddressMode.INDEXED),           1),
+                                 0X7edd : (Load_8b, (19, self.a, AddressMode.REGISTER,  self.iy,     AddressMode.INDEXED),           1),
+                                 0x3afd : (Load_8b, (13, self.a, AddressMode.REGISTER,  self.memsys, AddressMode.EXT_ADDRESS),       2),
+                                 0x2efd : (Load_8b, (7,  self.a, AddressMode.REGISTER,  None,        AddressMode.IMMEDIATE),         1)}
+                                 
 
     def reset(self):
         """Resets the CPU"""
