@@ -61,3 +61,4 @@ class CompositeRegister(object):
         temp = ((2 ** self.length) - 1) & new_value
         self._high.value = temp >> self._high.length
         self._low.value = temp & ((2 ** self._low.length) - 1)
+        
