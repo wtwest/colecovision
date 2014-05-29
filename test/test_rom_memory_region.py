@@ -4,7 +4,7 @@ import os
 import random
 import struct
 import unittest
-from colecovision.emulate.memory import ROM_MemoryRegion
+from colecovision.memory import ROM_MemoryRegion
 
 
 class TestMemoryRegion(unittest.TestCase):

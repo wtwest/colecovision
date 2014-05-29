@@ -1,7 +1,7 @@
 """Unit tests for Z80 registers"""
 
 import unittest
-from colecovision.emulate.cpu.register import Register, CompositeRegister
+from colecovision.cpu.register import Register, CompositeRegister
 
 class TestRegister(unittest.TestCase):
 

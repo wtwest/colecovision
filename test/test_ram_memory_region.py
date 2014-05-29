@@ -2,7 +2,7 @@
 
 import unittest
 import random
-from colecovision.emulate.memory import RAM_MemoryRegion
+from colecovision.memory import RAM_MemoryRegion
 
 
 class TestMemoryRegion(unittest.TestCase):
