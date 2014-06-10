@@ -2,7 +2,7 @@
 
 import abc
 import logging
-
+import colecovision.cpu.condition
 
 #-----------------------------------------------------------------------------
 # Module Data
@@ -34,15 +34,6 @@ class InstructionInterface(object):
         """Number of cycles remaining to finish execution"""
         return self._cycles
 
-    @property
-    def descriptor(self):
-        """Description of the instruction...used to feed __str__"""
-        return self._descriptor
-
-    @descriptor.setter
-    def descriptor(self, new_value):
-        self._descriptor = new_value
-
 #-----------------------------------------------------------------------------
 # Classes
 #-----------------------------------------------------------------------------
@@ -73,71 +64,128 @@ class AddressMode(object):
     INDEXED           = 2
     EXT_ADDRESS       = 3
     IMMEDIATE         = 4
+    MEMORY_IMMEDIATE  = 5
+    REGISTER_SPECIAL  = 6 # interrupt vector, memory refresh, etc.
 
 class Load_8b(InstructionInterface):
     """8-bit Load Instruction"""
 
-    def __init__(self, cycles, 
-                 destination, destination_mode,
-                 source, source_mode,
-                 *additional_data):
+
+    # This dictionary uses the addressing modes for
+    # the load destination and load source to determine
+    # the cycle count for the instruction
+    cycle_map = { (AddressMode.REGISTER, AddressMode.REGISTER)           : 4,
+                  (AddressMode.REGISTER, AddressMode.IMMEDIATE)          : 7,
+                  (AddressMode.REGISTER, AddressMode.REGISTER_INDIRECT)  : 7,
+                  (AddressMode.REGISTER, AddressMode.INDEXED)            : 19,
+                  (AddressMode.REGISTER_INDIRECT, AddressMode.REGISTER)  : 7,
+                  (AddressMode.INDEXED, AddressMode.REGISTER)            : 19,
+                  (AddressMode.REGISTER_INDIRECT, AddressMode.IMMEDIATE) : 10,
+                  (AddressMode.INDEXED, AddressMode.IMMEDIATE)           : 19,
+                  (AddressMode.REGISTER, AddressMode.MEMORY_IMMEDIATE)   : 13,
+                  (AddressMode.MEMORY_IMMEDIATE, AddressMode.REGISTER)   : 13,
+                  (AddressMode.REGISTER, AddressMode.REGISTER_SPECIAL)   : 9  }
+
+    def __init__(self, register_set, ext_mem, 
+                 addressing_mode, src, dst, **kwargs):
         """Initialization"""
 
-        self._cycles = cycles
-        self._dest = destination
-        self._dest_mode = destination_mode
-        self._src  = source
-        self._src_mode = source_mode
-        self._extra_args = additional_data
+        self._register        = register_set
+        self._ext_mem         = ext_mem
+        self._addressing_mode = addressing_mode
+        self._src             = src
+        self._dst             = dst
+        self._cycles          = Load_8b.cycle_map[addressing_mode]
+
+        if kwargs.has_key('src_idx'):
+            self._src_idx = kwargs['src_idx']
+
+        if kwargs.has_key('dst_idx'):
+            self._dst_idx = kwargs['dst_idx']
+
+        if kwargs.has_key('iff2'):
+            self._iff2 = kwargs['iff2']
 
     def execute(self):
         """Execute the load instruction"""
 
-        self._cycles -= 1
+        if self._cycles > 0:
 
-        if self._cycles == 0:
-            
-            source_val = None 
+            self._cycles -= 1
 
-            # Get the source value
-            
-            if self._src_mode == AddressMode.REGISTER:
+            if self._cycles == 0:
 
-                source_val = self._src.value
-            
-            elif self._src_mode = AddressMode.REGISTER_INDIRECT:
-                
-                # TODO Need access to memory system
-                pass
+                if self._addressing_mode == (AddressMode.REGISTER, AddressMode.REGISTER):
 
-            elif self._src_mode = AddressMode.INDEXED:
-                
-                # TODO Need access to memory system
-                pass
+                    self._dst.value = self._src.value
 
-            elif self._src_mode = AddressMode.EXT_ADDRESS:
-                
-                source_value = self._src.read(self._extra_args)
+                elif self._addressing_mode == (AddressMode.REGISTER, AddressMode.IMMEDIATE):
 
-            elif self._src_mode = AddressMode.IMMEDIATE:
-                
-                source_value = self._extra_args
+                    self._dst.value = src
 
-            else:
-                err_msg = "Source addressing mode {0} not supported".format(self._src_mode)
-                raise LoadError(err_msg)
-                
-            # Load the souce value to the destination
-            
-            if self._dest_mode == AddressMode.REGISTER:
-            
-                self._dest.value = source_val
-                
-            elif self._dest_mode == AddressMode.REGISTER_INDIRECT:
-            
-                
+                elif self._addressing_mode == (AddressMode.REGISTER, AddressMode.REGISTER_INDIRECT):
 
-        elif self._cycles < 0:
+                    self._dst.value = self._ext_mem.read(self._src.value)
 
-            self._cycles = 0
+                elif self._addressing_mode == (AddressMode.REGISTER, AddressMode.INDEXED):
+
+                    self._dst.value = self._ext_mem.read(self._src.value + self._src_idx)
+
+                elif self._addressing_mode == (AddressMode.REGISTER_INDIRECT, AddressMode.REGISTER):
+
+                    self._ext_mem.write(self._dst.value, self._src.value)
+
+                elif self._addressing_mode == (AddressMode.INDEXED, AddressMode.REGISTER):
+
+                    self._ext_mem.write(self._dst.value + self._dst_idx, self._src.value)
+
+                elif self._addressing_mode == (AddressMode.REGISTER_INDIRECT, AddressMode.IMMEDIATE):
+
+                    self._ext_mem.write(self._dst.value, src)
+
+                elif self._addressing_mode == (AddressMode.INDEXED, AddressMode.IMMEDIATE):
+
+                    self._ext_mem.write(self._dst.value + self._dst_idx, self._src)
+
+                elif self._addressing_mode == (AddressMode.REGISTER, AddressMode.MEMORY_IMMEDIATE):
+
+                    self._dst.value = self._ext_mem.read(self._src)
+
+                elif self._addressing_mode == (AddressMode.MEMORY_IMMEDIATE, AddressMode.REGISTER):
+
+                    self._ext_mem.write(self._dst, self._src.value)
+
+                elif self._addressing_mode == (AddressMode.REGISTER, AddressMode.REGISTER_SPECIAL):
+
+                    self._dst.value = self._src.value
+
+                    # update the sign flag
+                    if (self._src.value & 0x10):
+                        self._register['F'].value = self._register['F'].value | cpu.colecovision.condition.SIGN
+                    else:
+                        self._register['F'].value = self._register['F'].value & ~cpu.colecovision.condition.SIGN
+
+                    
+                    # update the zero flag
+                    if not self._src.value:
+                        self._register['F'].value = self._register['F'].value | cpu.colecovision.condition.ZERO
+                    else:
+                        self._register['F'].value = self._register['F'].value & ~cpu.colecovision.condition.ZERO
+
+                    # reset half-carry
+                    self._register['F'].value = self._register['F'].value & ~cpu.colecovision.condition.HALF_CARY
+
+                    # add/substract is reset
+                    self._register['F'].value = self._register['F'].value & ~cpu.colecovision.condition.SUBTRACT
+
+                    # update the parity/overflow flag
+                    if self._iff2:
+                        self._register['F'].value = self._register['F'].value | cpu.colecovision.condition.PARITY_OVERFLOW
+                    else:
+                        self._register['F'].value = self._register['F'].value & ~cpu.colecovision.condition.PARITY_OVERFLOW
+
+                else:
+                    raise LoadError('Unknown addressing mode')
+
+
 
