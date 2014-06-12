@@ -13,6 +13,13 @@ _logger = logging.getLogger(__name__)
 
 
 #-----------------------------------------------------------------------------
+# Constants
+#-----------------------------------------------------------------------------
+
+_LOAD_8B_REGISTER_TO_REGISTER = 0x40
+
+
+#-----------------------------------------------------------------------------
 # Interfaces
 #-----------------------------------------------------------------------------
 
@@ -34,6 +41,8 @@ class InstructionInterface(object):
         """Number of cycles remaining to finish execution"""
         return self._cycles
 
+
+    
 #-----------------------------------------------------------------------------
 # Classes
 #-----------------------------------------------------------------------------
@@ -187,5 +196,76 @@ class Load_8b(InstructionInterface):
                 else:
                     raise LoadError('Unknown addressing mode')
 
+#-----------------------------------------------------------------------------
+# Functions
+#-----------------------------------------------------------------------------
 
+def _get_load_instruction_register(register_id):
+    """Returns the register associated with the register ID for a
+    load instuction.
+    """
+    
+    # load instruction register IDs
+    _REGISTER_ID_A = 7
+    _REGISTER_ID_B = 0
+    _REGISTER_ID_C = 1
+    _REGISTER_ID_D = 2
+    _REGISTER_ID_E = 3
+    _REGISTER_ID_H = 4
+    _REGISTER_ID_L = 5
+
+    instruction_register = None
+    
+    if register_id == _REGISTER_ID_A:
+        instruction_register = 'A'
+    elif register_id == _REGISTER_ID_B:
+        instruction_register = 'B'
+    elif register_id == _REGISTER_ID_C:
+        instruction_register = 'C'
+    elif register_id == _REGISTER_ID_D:
+        instruction_register = 'D'
+    elif register_id == _REGISTER_ID_E:
+        instruction_register = 'E'
+    elif register_id == _REGISTER_ID_H:
+        instruction_register = 'H'
+    elif register_id == _REGISTER_ID_L:
+        instruction_register = 'L'
+    else:
+        _logger.warning('_get_instruction_register: unknown register ID')
+    
+    return instruction_register
+
+def create(register, memory):
+    
+    """Decodes memory at the given PC address and creates an instruction.
+    
+    Returns a tuple that contains the number of bytes read and the
+    instruction.
+    """
+    
+    # no instruction
+    created_instruction = None
+    
+    # no bytes read
+    instruction_bytes_read = 0
+    
+    # create possible one, two, three, and four byte instructions
+    one_byte_instruction   = memory.read(register['PC'])
+    two_byte_instruction   = (memory.read[register['PC' + 1]] << 8) | one_byte_instruction
+    three_byte_instruction = (memory.read[register['PC' + 2]] << 16) | two_byte_instruction
+    four_byte_instruction  = (memory.read[register['PC' + 3]] << 16) | three_byte_instruction
+                                                   
+    
+    if (one_byte_instruction & _LOAD_8B_REGISTER_TO_REGISTER):
+        
+        src_reg = _get_load_instruction_register(one_byte_instruction & 0x07)
+        dst_reg = _get_load_instruction_register((one_byte_instruction >> 3) & 0x07)
+        
+        created_instruction = Load_8b(register, None, (AddressMode.REGISTER, AddressMode.REGISTER),
+                                      register[src_reg], register[dst_reg])
+        
+        instruction_bytes_read = 1
+        
+    
+    return (instruction_bytes_read, created_instruction)
 

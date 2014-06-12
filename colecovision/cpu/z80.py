@@ -40,39 +40,41 @@ class Z80(object):
     # to Mode 0...takes 3 cycles
 
     def __init__(self, memory_system):
-        """Initialize the Z80 emulation"""
+        """Initialization"""
 
-        self.pc    = Register(length=16, init_value=0)
-        self.sp    = Register(length=16, init_value=0)
-        self.ix    = Register(length=16, init_value=0)
-        self.iy    = Register(length=16, init_value=0)
-        self.i     = Register(length=8,  init_value=0)
-        self.r     = Register(length=8,  init_value=0)
-        self.a     = Register(length=8,  init_value=0)
-        self.a_alt = Register(length=8,  init_value=0)
-        self.f     = Register(length=8,  init_value=0)
-        self.f_alt = Register(length=8,  init_value=0)
-        self.b     = Register(length=8,  init_value=0)
-        self.b_alt = Register(length=8,  init_value=0)
-        self.c     = Register(length=8,  init_value=0)
-        self.c_alt = Register(length=8,  init_value=0)
-        self.d     = Register(length=8,  init_value=0)
-        self.d_alt = Register(length=8,  init_value=0)
-        self.e     = Register(length=8,  init_value=0)
-        self.e_alt = Register(length=8,  init_value=0)
-        self.h     = Register(length=8,  init_value=0)
-        self.h_alt = Register(length=8,  init_value=0)
-        self.l     = Register(length=8,  init_value=0)
-        self.l_alt = Register(length=8,  init_value=0)
 
-        # composite registers
-        self.bc     = CompositeRegister(self.b, self.c)
-        self.bc_alt = CompositeRegister(self.b_alt, self.c_alt)
-        self.de     = CompositeRegister(self.d, self.e)
-        self.de_alt = CompositeRegister(self.d_alt, self.e_alt)
-        self.hl     = CompositeRegister(self.h, self.l)
-        self.hl_alt = CompositeRegister(self.h_alt, self.l_alt)
+        # Create the CPU registers
+        self.register        = {}
+        self.register["PC"]  = Register(length=16, init_value=0)
+        self.register["SP"]  = Register(length=16, init_value=0)
+        self.register["IX"]  = Register(length=16, init_value=0)
+        self.register["IY"]  = Register(length=16, init_value=0)
+        self.register["I"]   = Register(length=8,  init_value=0)
+        self.register["R"]   = Register(length=8,  init_value=0)
+        self.register["A"]   = Register(length=8,  init_value=0)
+        self.register["A'"]  = Register(length=8,  init_value=0)
+        self.register["F"]   = Register(length=8,  init_value=0)
+        self.register["F'"]  = Register(length=8,  init_value=0)
+        self.register["B"]   = Register(length=8,  init_value=0)
+        self.register["B'"]  = Register(length=8,  init_value=0)
+        self.register["C"]   = Register(length=8,  init_value=0)
+        self.register["C'"]  = Register(length=8,  init_value=0)
+        self.register["D"]   = Register(length=8,  init_value=0)
+        self.register["D'"]  = Register(length=8,  init_value=0)
+        self.register["E"]   = Register(length=8,  init_value=0)
+        self.register["E'"]  = Register(length=8,  init_value=0)
+        self.register["H"]   = Register(length=8,  init_value=0)
+        self.register["H'"]  = Register(length=8,  init_value=0)
+        self.register["L"]   = Register(length=8,  init_value=0)
+        self.register["L'"]  = Register(length=8,  init_value=0)
+        self.register["BC"]  = CompositeRegister(self.register['B'], self.register['C'])
+        self.register["BC'"] = CompositeRegister(self.register["B'"], self.register["C'"])
+        self.register["DE"]  = CompositeRegister(self.register["D"], self.register["E"])
+        self.register["DE'"] = CompositeRegister(self.register["D'"], self.register["E'"])
+        self.register["HL"]  = CompositeRegister(self.register["H"], self.register["L"])
+        self.register["HL'"] = CompositeRegister(self.register["H'"], self.register["L'"])
 
+        # Get a reference to the memory system (RAM, ROM)
         self.memsys = memory_system
 
 
