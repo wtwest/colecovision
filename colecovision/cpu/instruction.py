@@ -16,7 +16,7 @@ _logger = logging.getLogger(__name__)
 # Constants
 #-----------------------------------------------------------------------------
 
-_LOAD_8B_REGISTER_TO_REGISTER = 0x40
+LOAD_8B_REGISTER_TO_REGISTER = 0x40
 
 
 #-----------------------------------------------------------------------------
@@ -64,6 +64,21 @@ class LoadError(InstructionError):
         """User-friendly string representation"""
         
         return self.mgs
+    
+class UnknownRegisterError(InstructionError):
+    """Unknow register ID error"""
+    
+    def __init__(self, bad_register_id):
+        """Initialization"""
+        
+        self.bad_register_id = bad_register_id
+        
+    def __str__(self):
+        """User-friendly string representation"""
+        
+        msg = "Unknown register ID {0}".format(self.bad_register_id)
+        
+        return msg
         
 class AddressMode(object):
     """Instruction Addressing Modes"""
@@ -206,32 +221,32 @@ def _get_load_instruction_register(register_id):
     """
     
     # load instruction register IDs
-    _REGISTER_ID_A = 7
-    _REGISTER_ID_B = 0
-    _REGISTER_ID_C = 1
-    _REGISTER_ID_D = 2
-    _REGISTER_ID_E = 3
-    _REGISTER_ID_H = 4
-    _REGISTER_ID_L = 5
+    REGISTER_ID_A = 7
+    REGISTER_ID_B = 0
+    REGISTER_ID_C = 1
+    REGISTER_ID_D = 2
+    REGISTER_ID_E = 3
+    REGISTER_ID_H = 4
+    REGISTER_ID_L = 5
 
     instruction_register = None
     
-    if register_id == _REGISTER_ID_A:
+    if register_id == REGISTER_ID_A:
         instruction_register = 'A'
-    elif register_id == _REGISTER_ID_B:
+    elif register_id == REGISTER_ID_B:
         instruction_register = 'B'
-    elif register_id == _REGISTER_ID_C:
+    elif register_id == REGISTER_ID_C:
         instruction_register = 'C'
-    elif register_id == _REGISTER_ID_D:
+    elif register_id == REGISTER_ID_D:
         instruction_register = 'D'
-    elif register_id == _REGISTER_ID_E:
+    elif register_id == REGISTER_ID_E:
         instruction_register = 'E'
-    elif register_id == _REGISTER_ID_H:
+    elif register_id == REGISTER_ID_H:
         instruction_register = 'H'
-    elif register_id == _REGISTER_ID_L:
+    elif register_id == REGISTER_ID_L:
         instruction_register = 'L'
     else:
-        _logger.warning('_get_instruction_register: unknown register ID')
+        raise UnknownRegisterError(register_id)
     
     return instruction_register
 
@@ -248,15 +263,15 @@ def create(register, memory):
     
     # no bytes read
     instruction_bytes_read = 0
-    
+
     # create possible one, two, three, and four byte instructions
-    one_byte_instruction   = memory.read(register['PC'])
-    two_byte_instruction   = (memory.read[register['PC' + 1]] << 8) | one_byte_instruction
-    three_byte_instruction = (memory.read[register['PC' + 2]] << 16) | two_byte_instruction
-    four_byte_instruction  = (memory.read[register['PC' + 3]] << 16) | three_byte_instruction
+    one_byte_instruction   = memory.read(register['PC'].value)
+    two_byte_instruction   = (memory.read(register['PC'].value + 1) << 8) | one_byte_instruction
+    three_byte_instruction = (memory.read(register['PC'].value + 2) << 16) | two_byte_instruction
+    four_byte_instruction  = (memory.read(register['PC'].value + 3) << 16) | three_byte_instruction
                                                    
     
-    if (one_byte_instruction & _LOAD_8B_REGISTER_TO_REGISTER):
+    if (one_byte_instruction & LOAD_8B_REGISTER_TO_REGISTER):
         
         src_reg = _get_load_instruction_register(one_byte_instruction & 0x07)
         dst_reg = _get_load_instruction_register((one_byte_instruction >> 3) & 0x07)

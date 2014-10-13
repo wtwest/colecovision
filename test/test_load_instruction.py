@@ -1,11 +1,13 @@
 """Unit tests for the load instructions (8 and 16 bit)"""
 
 import unittest
+import colecovision.cpu.instruction
 from colecovision.cpu.instruction import LoadError, Load_8b, AddressMode 
 from colecovision.cpu.register import Register, CompositeRegister
 from colecovision.memory import RAM_MemoryRegion
 
 class TestLoadInstruction(unittest.TestCase):
+    """Base class for load instruction test cases"""
     
     def setUp(self):
         """Setup CPU registers and memory for testing"""
@@ -41,17 +43,17 @@ class TestLoadInstruction(unittest.TestCase):
         self.register["HL"]  = CompositeRegister(self.register["H"], self.register["L"])
         self.register["HL'"] = CompositeRegister(self.register["H'"], self.register["L'"])
 
-
         self.RAM_LENGTH = 1024
         
         self.ram = RAM_MemoryRegion(self.RAM_LENGTH)
-
+        
         for i in range(self.RAM_LENGTH):
             self.ram.write(i, 0)
         
 
-class TestRegisterToRegister(TestLoadInstruction):
-
+class TestRegisterToRegisterExecution(TestLoadInstruction):
+    """Tests for register->register load instruction execution"""
+    
     def setUp(self):
                
         TestLoadInstruction.setUp(self)
@@ -96,6 +98,37 @@ class TestRegisterToRegister(TestLoadInstruction):
         
         self.assertEqual(self.register['B'].value, load_value)
 
-
-
-
+class TestRegisterToRegisterDecode(TestLoadInstruction):
+    """Tests for decoding register->register load instructions"""
+    
+    def setUp(self):
+        
+        TestLoadInstruction.setUp(self)
+        
+    def test_unknown_register(self):
+        """Verify that an exception is raised if a load instruction
+        is decoded and one of the registers (source, destination) is
+        unknown.
+        """
+        
+        load_instruction = colecovision.cpu.instruction.LOAD_8B_REGISTER_TO_REGISTER
+        
+        bad_register_id = 6
+        
+        load_instruction = load_instruction | (bad_register_id << 3)
+        
+        load_instruction = load_instruction | bad_register_id
+        
+        self.ram.write(0, load_instruction)
+        
+        self.assertEqual(self.ram.read(0), load_instruction)
+        
+        self.register['PC'].value = 0
+        
+        with self.assertRaises(colecovision.cpu.instruction.UnknownRegisterError):
+            
+            bytes_read, created_instruction = colecovision.cpu.instruction.create(self.register, self.ram)
+        
+        
+        
+        
